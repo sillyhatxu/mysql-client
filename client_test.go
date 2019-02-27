@@ -21,7 +21,11 @@ type Userinfo struct {
 	LastModifiedDate time.Time `mapstructure:"last_modified_date"`
 }
 
-const dataSourceName = `sillyhat:sillyhat@tcp(127.0.0.1:3308)/sillyhat`
+const (
+	dataSourceName = `sillyhat:sillyhat@tcp(127.0.0.1:3308)/sillyhat`
+	maxIdleConns   = 5
+	maxOpenConns   = 10
+)
 
 const (
 	insert_sql = `
