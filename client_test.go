@@ -81,7 +81,7 @@ const (
 )
 
 func TestClientInsert(t *testing.T) {
-	InitialDBClient(dataSourceName, 5, 10)
+	InitialDBClient(dataSourceName, maxIdleConns, maxOpenConns)
 	id, err := Client.Insert(insert_sql, "test name", 21, "1989-06-09", "This is description", false)
 	log.Info("id : ", id)
 	assert.Nil(t, err)
@@ -89,7 +89,7 @@ func TestClientInsert(t *testing.T) {
 }
 
 func TestClientUpdate(t *testing.T) {
-	InitialDBClient(dataSourceName, 5, 10)
+	InitialDBClient(dataSourceName, maxIdleConns, maxOpenConns)
 	count, err := Client.Update(update_sql, "test name update", 22, "2000-01-01", "This is update result", true, 2)
 	log.Info("count : ", count)
 	assert.Nil(t, err)
@@ -97,7 +97,7 @@ func TestClientUpdate(t *testing.T) {
 }
 
 func TestClientFindOne(t *testing.T) {
-	InitialDBClient(dataSourceName, 5, 10)
+	InitialDBClient(dataSourceName, maxIdleConns, maxOpenConns)
 	result, err := Client.FindOne(findOne_sql + "2")
 	assert.Nil(t, err)
 	var user *Userinfo
@@ -128,7 +128,7 @@ func TestClientFindOne(t *testing.T) {
 }
 
 func TestClientFind(t *testing.T) {
-	InitialDBClient(dataSourceName, 5, 10)
+	InitialDBClient(dataSourceName, maxIdleConns, maxOpenConns)
 	results, err := Client.Find(findAll_sql)
 	assert.Nil(t, err)
 	var userArray []Userinfo
@@ -151,7 +151,7 @@ func TestClientFind(t *testing.T) {
 }
 
 func TestClientBatchInsert(t *testing.T) {
-	InitialDBClient(dataSourceName, 5, 10)
+	InitialDBClient(dataSourceName, maxIdleConns, maxOpenConns)
 	result, err := Client.BatchInsert(func(tx *sql.Tx) (int, error) {
 		totalCount := 0
 		for i := 1001; i <= 2000; i++ {
@@ -166,7 +166,7 @@ func TestClientBatchInsert(t *testing.T) {
 }
 
 func TestClientBatchUpdate(t *testing.T) {
-	InitialDBClient(dataSourceName, 5, 10)
+	InitialDBClient(dataSourceName, maxIdleConns, maxOpenConns)
 	result, err := Client.BatchUpdate(func(tx *sql.Tx) (int, error) {
 		totalCount := 0
 		for i := 3; i <= 1002; i++ {
@@ -181,7 +181,7 @@ func TestClientBatchUpdate(t *testing.T) {
 }
 
 func TestClientCount(t *testing.T) {
-	InitialDBClient(dataSourceName, 5, 10)
+	InitialDBClient(dataSourceName, maxIdleConns, maxOpenConns)
 	count, err := Client.Count(count_sql)
 	log.Info("count : ", count)
 	assert.Nil(t, err)
@@ -189,7 +189,7 @@ func TestClientCount(t *testing.T) {
 }
 
 func TestClientDeleteOne(t *testing.T) {
-	InitialDBClient(dataSourceName, 5, 10)
+	InitialDBClient(dataSourceName, maxIdleConns, maxOpenConns)
 	count, err := Client.DeleteByPrimaryKey(deleteOne_sql, 3)
 	log.Info("count : ", count)
 	assert.Nil(t, err)
@@ -197,7 +197,7 @@ func TestClientDeleteOne(t *testing.T) {
 }
 
 func TestClientDelete(t *testing.T) {
-	InitialDBClient(dataSourceName, 5, 10)
+	InitialDBClient(dataSourceName, maxIdleConns, maxOpenConns)
 	count, err := Client.Delete(delete_sql, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23)
 	log.Info("count : ", count)
 	assert.Nil(t, err)
