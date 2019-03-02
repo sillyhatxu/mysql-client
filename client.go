@@ -3,7 +3,7 @@ package dbclient
 import (
 	"database/sql"
 	_ "github.com/go-sql-driver/mysql"
-	log "github.com/sillyhatxu/microlog"
+	"log"
 )
 
 type ClientConfig struct {
@@ -15,6 +15,7 @@ type ClientConfig struct {
 var Client ClientConfig
 
 func InitialDBClient(dataSourceName string, maxIdleConns int, maxOpenConns int) {
+	log.Printf("initial db client. dataSourceName : %v ; maxIdleConns : %v ; maxOpenConns : %v", dataSourceName, maxIdleConns, maxOpenConns)
 	Client.dataSourceName = dataSourceName
 	Client.maxIdleConns = maxIdleConns
 	Client.maxOpenConns = maxOpenConns
@@ -27,7 +28,7 @@ func (client *ClientConfig) getConnection() (*sql.DB, error) {
 	}
 	err = db.Ping()
 	if err != nil {
-		log.Error("ping mysql error.", err)
+		log.Println("ping mysql error.", err)
 		return nil, err
 	}
 	//mysqlClient.pool.SetConnMaxLifetime(time.Duration(connMaxLifetime) * time.Second)
@@ -39,19 +40,19 @@ func (client *ClientConfig) getConnection() (*sql.DB, error) {
 func (client *ClientConfig) Insert(sql string, args ...interface{}) (int64, error) {
 	db, err := client.getConnection()
 	if err != nil {
-		log.Error("mysql get connection error.", err)
+		log.Println("mysql get connection error.", err)
 		return 0, err
 	}
 	defer db.Close()
 	stm, err := db.Prepare(sql)
 	if err != nil {
-		log.Error("prepare mysql error.", err)
+		log.Println("prepare mysql error.", err)
 		return 0, err
 	}
 	defer stm.Close()
 	result, err := stm.Exec(args...)
 	if err != nil {
-		log.Error("insert data error.", err)
+		log.Println("insert data error.", err)
 		return 0, err
 	}
 	return result.LastInsertId()
@@ -60,19 +61,19 @@ func (client *ClientConfig) Insert(sql string, args ...interface{}) (int64, erro
 func (client *ClientConfig) Update(sql string, args ...interface{}) (int64, error) {
 	db, err := client.getConnection()
 	if err != nil {
-		log.Error("mysql get connection error.", err)
+		log.Println("mysql get connection error.", err)
 		return 0, err
 	}
 	defer db.Close()
 	stm, err := db.Prepare(sql)
 	if err != nil {
-		log.Error("prepare mysql error.", err)
+		log.Println("prepare mysql error.", err)
 		return 0, err
 	}
 	defer stm.Close()
 	result, err := stm.Exec(args...)
 	if err != nil {
-		log.Error("update data error.", err)
+		log.Println("update data error.", err)
 		return 0, err
 	}
 	return result.RowsAffected()
@@ -81,26 +82,26 @@ func (client *ClientConfig) Update(sql string, args ...interface{}) (int64, erro
 func (client *ClientConfig) Find(sql string) ([]map[string]interface{}, error) {
 	db, err := client.getConnection()
 	if err != nil {
-		log.Error("mysql get connection error.", err)
+		log.Println("mysql get connection error.", err)
 		return nil, err
 	}
 	defer db.Close()
 	tx, err := db.Begin()
 	if err != nil {
-		log.Error("mysql client get transaction error.", err)
+		log.Println("mysql client get transaction error.", err)
 		return nil, err
 	}
 	defer tx.Commit()
 	rows, err := tx.Query(sql)
 	if err != nil {
-		log.Error("Query error.", err)
+		log.Println("Query error.", err)
 		return nil, err
 	}
 	defer rows.Close()
 	//Read database columns
 	columns, err := rows.Columns()
 	if err != nil {
-		log.Error("rows.Columns() error.", err)
+		log.Println("rows.Columns() error.", err)
 		return nil, err
 	}
 	//values是每个列的值，这里获取到byte里
@@ -132,13 +133,13 @@ func (client *ClientConfig) Find(sql string) ([]map[string]interface{}, error) {
 func (client *ClientConfig) FindOne(sql string) (map[string]interface{}, error) {
 	db, err := client.getConnection()
 	if err != nil {
-		log.Error("mysql get connection error.", err)
+		log.Println("mysql get connection error.", err)
 		return nil, err
 	}
 	defer db.Close()
 	tx, err := db.Begin()
 	if err != nil {
-		log.Error("mysql client get transaction error.", err)
+		log.Println("mysql client get transaction error.", err)
 		return nil, err
 	}
 	defer tx.Commit()
@@ -180,18 +181,18 @@ type BatchCallback func(*sql.Tx) (int, error)
 func (client *ClientConfig) BatchInsert(callback BatchCallback) (int, error) {
 	db, err := client.getConnection()
 	if err != nil {
-		log.Error("mysql get connection error.", err)
+		log.Println("mysql get connection error.", err)
 		return 0, err
 	}
 	defer db.Close()
 	tx, err := db.Begin()
 	if err != nil {
-		log.Error("mysql client get transaction error.", err)
+		log.Println("mysql client get transaction error.", err)
 		return 0, err
 	}
 	result, err := callback(tx)
 	if err != nil {
-		log.Error("batch insert data error.", err)
+		log.Println("batch insert data error.", err)
 		return 0, err
 	}
 	defer tx.Commit()
@@ -201,18 +202,18 @@ func (client *ClientConfig) BatchInsert(callback BatchCallback) (int, error) {
 func (client *ClientConfig) BatchUpdate(callback BatchCallback) (int, error) {
 	db, err := client.getConnection()
 	if err != nil {
-		log.Error("mysql get connection error.", err)
+		log.Println("mysql get connection error.", err)
 		return 0, err
 	}
 	defer db.Close()
 	tx, err := db.Begin()
 	if err != nil {
-		log.Error("mysql client get transaction error.", err)
+		log.Println("mysql client get transaction error.", err)
 		return 0, err
 	}
 	result, err := callback(tx)
 	if err != nil {
-		log.Error("batch update data error.", err)
+		log.Println("batch update data error.", err)
 		return 0, err
 	}
 	defer tx.Commit()
@@ -222,20 +223,20 @@ func (client *ClientConfig) BatchUpdate(callback BatchCallback) (int, error) {
 func (client *ClientConfig) Count(sql string) (int, error) {
 	db, err := client.getConnection()
 	if err != nil {
-		log.Error("mysql get connection error.", err)
+		log.Println("mysql get connection error.", err)
 		return 0, err
 	}
 	defer db.Close()
 	tx, err := db.Begin()
 	if err != nil {
-		log.Error("mysql client get connection error.", err)
+		log.Println("mysql client get connection error.", err)
 		return 0, err
 	}
 	defer tx.Commit()
 	var count int
 	countErr := tx.QueryRow(sql).Scan(&count)
 	if countErr != nil {
-		log.Error("Query count error.", err)
+		log.Println("Query count error.", err)
 		return 0, err
 	}
 	return count, nil
@@ -245,19 +246,19 @@ func (client *ClientConfig) Count(sql string) (int, error) {
 func (client *ClientConfig) Delete(sql string, args ...interface{}) (int64, error) {
 	db, err := client.getConnection()
 	if err != nil {
-		log.Error("mysql get connection error.", err)
+		log.Println("mysql get connection error.", err)
 		return 0, err
 	}
 	defer db.Close()
 	stm, err := db.Prepare(sql)
 	if err != nil {
-		log.Error("mysql client get connection error.", err)
+		log.Println("mysql client get connection error.", err)
 		return 0, err
 	}
 	defer stm.Close()
 	result, err := stm.Exec(args...)
 	if err != nil {
-		log.Error("delete data error.", err)
+		log.Println("delete data error.", err)
 		return 0, err
 	}
 	return result.RowsAffected()
@@ -266,19 +267,19 @@ func (client *ClientConfig) Delete(sql string, args ...interface{}) (int64, erro
 func (client *ClientConfig) DeleteByPrimaryKey(sql string, id int64) (int64, error) {
 	db, err := client.getConnection()
 	if err != nil {
-		log.Error("mysql get connection error.", err)
+		log.Println("mysql get connection error.", err)
 		return 0, err
 	}
 	defer db.Close()
 	stm, err := db.Prepare(sql)
 	if err != nil {
-		log.Error("mysql client get connection error.", err)
+		log.Println("mysql client get connection error.", err)
 		return 0, err
 	}
 	defer stm.Close()
 	result, err := stm.Exec(id)
 	if err != nil {
-		log.Error("DeleteByPrimaryKey error.", err)
+		log.Println("DeleteByPrimaryKey error.", err)
 		return 0, err
 	}
 	return result.RowsAffected()
