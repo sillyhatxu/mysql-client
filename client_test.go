@@ -49,11 +49,20 @@ const (
 	`
 
 	findAll_sql = `
-		select id,name, age, TIMESTAMP(birthday) birthday, description, (is_delete = b'1') is_delete, created_date, last_modified_date from userinfo
+		select id,
+		       name,
+		       age,
+		       TIMESTAMP(birthday) birthday,
+		       description,
+		       (is_delete = b'1')  is_delete,
+		       created_date,
+		       last_modified_date
+		from userinfo
+		where age > ? and is_delete = ? and name like ?
 	`
 
 	findOne_sql = `
-		select id,name, age, TIMESTAMP(birthday) birthday, description, (is_delete = b'1') is_delete, created_date, last_modified_date from userinfo where id = 
+		select id,name, age, TIMESTAMP(birthday) birthday, description, (is_delete = b'1') is_delete, created_date, last_modified_date from userinfo where id = ? and is_delete = ?
 	`
 
 	deleteOne_sql = `
@@ -98,7 +107,7 @@ func TestClientUpdate(t *testing.T) {
 
 func TestClientFindOne(t *testing.T) {
 	InitialDBClient(dataSourceName, maxIdleConns, maxOpenConns)
-	result, err := Client.FindOne(findOne_sql + "2")
+	result, err := Client.FindOne(findOne_sql, "2", true)
 	assert.Nil(t, err)
 	var user *Userinfo
 	config := &mapstructure.DecoderConfig{
@@ -130,7 +139,7 @@ func TestClientFindOne(t *testing.T) {
 func TestClientFind(t *testing.T) {
 	log.Printf("initial db client. dataSourceName : %v ; maxIdleConns : %v ; maxOpenConns : %v", dataSourceName, maxIdleConns, maxOpenConns)
 	InitialDBClient(dataSourceName, maxIdleConns, maxOpenConns)
-	results, err := Client.Find(findAll_sql)
+	results, err := Client.Find(findAll_sql, 21, true, "%update name%")
 	assert.Nil(t, err)
 	var userArray []Userinfo
 	config := &mapstructure.DecoderConfig{
@@ -146,21 +155,25 @@ func TestClientFind(t *testing.T) {
 	if err != nil {
 		panic(err)
 	}
-	assert.EqualValues(t, len(userArray), 2)
-	assert.EqualValues(t, userArray[0].Id, 1)
-	assert.EqualValues(t, userArray[1].Id, 2)
+	assert.EqualValues(t, len(userArray), 13)
+	assert.EqualValues(t, userArray[0].Id, 357)
+	assert.EqualValues(t, userArray[1].Id, 358)
+
+	//assert.EqualValues(t, len(userArray), 14)
+	//assert.EqualValues(t, userArray[0].Id, 2)
+	//assert.EqualValues(t, userArray[1].Id, 357)
 }
 
 func TestClientBatchInsert(t *testing.T) {
 	InitialDBClient(dataSourceName, maxIdleConns, maxOpenConns)
-	result, err := Client.BatchInsert(func(tx *sql.Tx) (int, error) {
+	result, err := Client.BatchInsert(func(tx *sql.Tx) (int64, error) {
 		totalCount := 0
 		for i := 1001; i <= 2000; i++ {
 			_, err := tx.Exec(insert_sql, "test name"+strconv.Itoa(i), 21, "1989-06-09", "This is description", false)
 			assert.Nil(t, err)
 			totalCount++
 		}
-		return totalCount, nil
+		return int64(totalCount), nil
 	})
 	assert.Nil(t, err)
 	assert.EqualValues(t, result, 1000)
@@ -168,14 +181,14 @@ func TestClientBatchInsert(t *testing.T) {
 
 func TestClientBatchUpdate(t *testing.T) {
 	InitialDBClient(dataSourceName, maxIdleConns, maxOpenConns)
-	result, err := Client.BatchUpdate(func(tx *sql.Tx) (int, error) {
+	result, err := Client.BatchUpdate(func(tx *sql.Tx) (int64, error) {
 		totalCount := 0
 		for i := 3; i <= 1002; i++ {
 			_, err := tx.Exec(update_sql, "test update name -"+strconv.Itoa(i), 21, "2005-01-30", "This is update", true, i)
 			assert.Nil(t, err)
 			totalCount++
 		}
-		return totalCount, nil
+		return int64(totalCount), nil
 	})
 	assert.Nil(t, err)
 	assert.EqualValues(t, result, 1000)

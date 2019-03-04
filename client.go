@@ -79,7 +79,7 @@ func (client *ClientConfig) Update(sql string, args ...interface{}) (int64, erro
 	return result.RowsAffected()
 }
 
-func (client *ClientConfig) Find(sql string) ([]map[string]interface{}, error) {
+func (client *ClientConfig) Find(sql string, args ...interface{}) ([]map[string]interface{}, error) {
 	db, err := client.getConnection()
 	if err != nil {
 		log.Println("mysql get connection error.", err)
@@ -92,7 +92,7 @@ func (client *ClientConfig) Find(sql string) ([]map[string]interface{}, error) {
 		return nil, err
 	}
 	defer tx.Commit()
-	rows, err := tx.Query(sql)
+	rows, err := tx.Query(sql, args...)
 	if err != nil {
 		log.Println("Query error.", err)
 		return nil, err
@@ -130,7 +130,7 @@ func (client *ClientConfig) Find(sql string) ([]map[string]interface{}, error) {
 	return results, nil
 }
 
-func (client *ClientConfig) FindOne(sql string) (map[string]interface{}, error) {
+func (client *ClientConfig) FindOne(sql string, args ...interface{}) (map[string]interface{}, error) {
 	db, err := client.getConnection()
 	if err != nil {
 		log.Println("mysql get connection error.", err)
@@ -143,7 +143,7 @@ func (client *ClientConfig) FindOne(sql string) (map[string]interface{}, error) 
 		return nil, err
 	}
 	defer tx.Commit()
-	rows, err := tx.Query(sql)
+	rows, err := tx.Query(sql, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -176,9 +176,9 @@ func (client *ClientConfig) FindOne(sql string) (map[string]interface{}, error) 
 	return nil, nil
 }
 
-type BatchCallback func(*sql.Tx) (int, error)
+type BatchCallback func(*sql.Tx) (int64, error)
 
-func (client *ClientConfig) BatchInsert(callback BatchCallback) (int, error) {
+func (client *ClientConfig) BatchInsert(callback BatchCallback) (int64, error) {
 	db, err := client.getConnection()
 	if err != nil {
 		log.Println("mysql get connection error.", err)
@@ -199,7 +199,7 @@ func (client *ClientConfig) BatchInsert(callback BatchCallback) (int, error) {
 	return result, nil
 }
 
-func (client *ClientConfig) BatchUpdate(callback BatchCallback) (int, error) {
+func (client *ClientConfig) BatchUpdate(callback BatchCallback) (int64, error) {
 	db, err := client.getConnection()
 	if err != nil {
 		log.Println("mysql get connection error.", err)
@@ -220,7 +220,7 @@ func (client *ClientConfig) BatchUpdate(callback BatchCallback) (int, error) {
 	return result, nil
 }
 
-func (client *ClientConfig) Count(sql string) (int, error) {
+func (client *ClientConfig) Count(sql string) (int64, error) {
 	db, err := client.getConnection()
 	if err != nil {
 		log.Println("mysql get connection error.", err)
@@ -233,7 +233,7 @@ func (client *ClientConfig) Count(sql string) (int, error) {
 		return 0, err
 	}
 	defer tx.Commit()
-	var count int
+	var count int64
 	countErr := tx.QueryRow(sql).Scan(&count)
 	if countErr != nil {
 		log.Println("Query count error.", err)
