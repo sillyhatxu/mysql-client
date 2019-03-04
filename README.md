@@ -160,7 +160,7 @@ func TestClientDelete(t *testing.T) {
 ```
 func TestClientFindOne(t *testing.T) {
 	InitialDBClient(dataSourceName, 5, 10)
-	result, err := Client.FindOne(findOne_sql + "2")
+	result, err := Client.FindOne(findOne_sql,2)
 	assert.Nil(t, err)
 	var user *Userinfo
 	config := &mapstructure.DecoderConfig{
@@ -195,7 +195,7 @@ func TestClientFindOne(t *testing.T) {
 ```
 func TestClientFind(t *testing.T) {
 	InitialDBClient(dataSourceName, 5, 10)
-	results, err := Client.Find(findAll_sql)
+	results, err := Client.Find(findAll_sql,21, true, "%update name%")
 	assert.Nil(t, err)
 	var userArray []Userinfo
 	config := &mapstructure.DecoderConfig{
