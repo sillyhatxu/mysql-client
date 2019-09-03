@@ -5,7 +5,6 @@ import (
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/mitchellh/mapstructure"
 	"github.com/sirupsen/logrus"
-	"log"
 	"sync"
 	"time"
 )
@@ -53,10 +52,12 @@ func (cc *ClientConf) Initial() error {
 	defer cc.mu.Unlock()
 	db, err := sql.Open("mysql", cc.DataSourceName)
 	if err != nil {
+		logrus.Errorf("open database error; %v", err)
 		return err
 	}
 	err = db.Ping()
 	if err != nil {
+		logrus.Errorf("ping database error; %v", err)
 		return err
 	}
 	cc.db = db
@@ -92,17 +93,6 @@ func (cc *ClientConf) FindCustom(query string, fieldFunc FieldFunc, args ...inte
 	return rows.Err()
 }
 
-func (cc *ClientConf) FindMapFirst(sql string, args ...interface{}) (map[string]interface{}, error) {
-	array, err := cc.FindMapArray(sql, args...)
-	if err != nil {
-		return nil, err
-	}
-	if array == nil || len(array) == 0 {
-		return nil, nil
-	}
-	return array[0], nil
-}
-
 func (cc *ClientConf) FindMapArray(sql string, args ...interface{}) ([]map[string]interface{}, error) {
 	db, err := cc.GetDB()
 	if err != nil {
@@ -110,18 +100,19 @@ func (cc *ClientConf) FindMapArray(sql string, args ...interface{}) ([]map[strin
 	}
 	tx, err := db.Begin()
 	if err != nil {
-		log.Println("mysql client get transaction error.", err)
+		logrus.Errorf("mysql client get transaction error; %v", err)
 		return nil, err
 	}
+	defer tx.Commit()
 	rows, err := tx.Query(sql, args...)
 	if err != nil {
-		log.Println("Query error.", err)
+		logrus.Errorf("query error; %v", err)
 		return nil, err
 	}
 	defer rows.Close()
 	columns, err := rows.Columns()
 	if err != nil {
-		log.Println("rows.Columns() error.", err)
+		logrus.Errorf("rows.Columns() error; %v", err)
 		return nil, err
 	}
 	//values是每个列的值，这里获取到byte里
@@ -150,6 +141,17 @@ func (cc *ClientConf) FindMapArray(sql string, args ...interface{}) ([]map[strin
 	return results, nil
 }
 
+func (cc *ClientConf) FindMapFirst(sql string, args ...interface{}) (map[string]interface{}, error) {
+	array, err := cc.FindMapArray(sql, args...)
+	if err != nil {
+		return nil, err
+	}
+	if array == nil || len(array) == 0 {
+		return nil, nil
+	}
+	return array[0], nil
+}
+
 func (cc *ClientConf) FindList(sql string, input interface{}, args ...interface{}) error {
 	results, err := cc.FindMapArray(sql, args...)
 	if err != nil {
@@ -171,7 +173,7 @@ func (cc *ClientConf) FindList(sql string, input interface{}, args ...interface{
 	return nil
 }
 
-func (cc *ClientConf) FindListByDefaultConfig(sql string, input interface{}, config *mapstructure.DecoderConfig, args ...interface{}) error {
+func (cc *ClientConf) FindListByConfig(sql string, input interface{}, config *mapstructure.DecoderConfig, args ...interface{}) error {
 	results, err := cc.FindMapArray(sql, args...)
 	if err != nil {
 		return err
@@ -208,7 +210,7 @@ func (cc *ClientConf) FindFirst(sql string, input interface{}, args ...interface
 	return nil
 }
 
-func (cc *ClientConf) FindFirstByDefaultConfig(sql string, input interface{}, config *mapstructure.DecoderConfig, args ...interface{}) error {
+func (cc *ClientConf) FindFirstByConfig(sql string, input interface{}, config *mapstructure.DecoderConfig, args ...interface{}) error {
 	result, err := cc.FindMapFirst(sql, args...)
 	if err != nil {
 		return err
@@ -231,13 +233,14 @@ func (cc *ClientConf) Count(sql string, args ...interface{}) (int64, error) {
 	}
 	tx, err := db.Begin()
 	if err != nil {
-		log.Println("mysql client get connection error.", err)
+		logrus.Errorf("mysql client get connection error; %v", err)
 		return 0, err
 	}
+	defer tx.Commit()
 	var count int64
 	countErr := tx.QueryRow(sql, args...).Scan(&count)
 	if countErr != nil {
-		log.Println("Query count error.", err)
+		logrus.Errorf("query count error; %v", err)
 		return 0, err
 	}
 	return count, nil
@@ -250,13 +253,13 @@ func (cc *ClientConf) Insert(sql string, args ...interface{}) (int64, error) {
 	}
 	stm, err := db.Prepare(sql)
 	if err != nil {
-		logrus.Errorf("prepare mysql error. %v", err)
+		logrus.Errorf("prepare mysql error; %v", err)
 		return 0, err
 	}
 	defer stm.Close()
 	result, err := stm.Exec(args...)
 	if err != nil {
-		logrus.Errorf("insert data error. %v", err)
+		logrus.Errorf("insert data error; %v", err)
 		return 0, err
 	}
 	return result.LastInsertId()
@@ -271,12 +274,12 @@ func (cc *ClientConf) Transaction(callback TransactionCallback) error {
 	}
 	tx, err := db.Begin()
 	if err != nil {
-		logrus.Errorf("mysql client get transaction error. %v", err)
+		logrus.Errorf("mysql client get transaction error; %v", err)
 		return err
 	}
 	err = callback(tx)
 	if err != nil {
-		logrus.Errorf("transaction data error. %v", err)
+		logrus.Errorf("transaction data error; %v", err)
 		tx.Rollback()
 		return err
 	}
@@ -290,13 +293,13 @@ func (cc *ClientConf) Update(sql string, args ...interface{}) (int64, error) {
 	}
 	stm, err := db.Prepare(sql)
 	if err != nil {
-		logrus.Errorf("prepare mysql error. %v", err)
+		logrus.Errorf("prepare mysql error; %v", err)
 		return 0, err
 	}
 	defer stm.Close()
 	result, err := stm.Exec(args...)
 	if err != nil {
-		logrus.Errorf("update data error. %v", err)
+		logrus.Errorf("update data error; %v", err)
 		return 0, err
 	}
 	return result.RowsAffected()
@@ -309,13 +312,13 @@ func (cc *ClientConf) Delete(sql string, args ...interface{}) (int64, error) {
 	}
 	stm, err := db.Prepare(sql)
 	if err != nil {
-		logrus.Errorf("prepare mysql error. %v", err)
+		logrus.Errorf("prepare mysql error; %v", err)
 		return 0, err
 	}
 	defer stm.Close()
 	result, err := stm.Exec(args...)
 	if err != nil {
-		logrus.Errorf("delete data error. %v", err)
+		logrus.Errorf("delete data error; %v", err)
 		return 0, err
 	}
 	return result.RowsAffected()
