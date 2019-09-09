@@ -1,6 +1,7 @@
 package dbclient
 
 import (
+	"log"
 	"testing"
 	"time"
 )
@@ -84,5 +85,19 @@ const (
 		`
 )
 
-func TestClientInsert(t *testing.T) {
+func TestClientGetConnection(t *testing.T) {
+	dbclient := NewMysqlClientConf(dataSourceName)
+	dbclient.SetAttempts(20)
+	dbclient.SetConnMaxLifetime(500 * time.Millisecond)
+	dbclient.Initial()
+	for {
+		count, err := dbclient.Count(count_sql)
+		if err != nil {
+			log.Println(err)
+			continue
+		}
+		log.Println(count)
+		time.Sleep(5 * time.Second)
+	}
+
 }
