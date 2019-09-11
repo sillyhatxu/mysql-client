@@ -1,6 +1,7 @@
 package dbclient
 
 import (
+	"github.com/stretchr/testify/assert"
 	"log"
 	"testing"
 	"time"
@@ -86,10 +87,9 @@ const (
 )
 
 func TestClientGetConnection(t *testing.T) {
-	dbclient := NewMysqlClientConf(dataSourceName)
-	dbclient.SetAttempts(20)
-	dbclient.SetConnMaxLifetime(500 * time.Millisecond)
-	dbclient.Initial()
+	dbclient := NewMysqlClientConf(dataSourceName, Attempts(20), ConnMaxLifetime(500*time.Millisecond))
+	err := dbclient.Initial()
+	assert.Nil(t, err)
 	for {
 		count, err := dbclient.Count(count_sql)
 		if err != nil {
@@ -99,5 +99,18 @@ func TestClientGetConnection(t *testing.T) {
 		log.Println(count)
 		time.Sleep(5 * time.Second)
 	}
+
+}
+
+func TestHasTable(t *testing.T) {
+	dbclient := NewMysqlClientConf(dataSourceName)
+	err := dbclient.Initial()
+	assert.Nil(t, err)
+	b, err := dbclient.HasTable("test")
+	assert.Nil(t, err)
+	assert.EqualValues(t, b, false)
+	b, err = dbclient.HasTable("userinfo")
+	assert.Nil(t, err)
+	assert.EqualValues(t, b, true)
 
 }

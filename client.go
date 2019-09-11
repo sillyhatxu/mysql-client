@@ -2,6 +2,7 @@ package dbclient
 
 import (
 	"database/sql"
+	"fmt"
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/mitchellh/mapstructure"
 	"github.com/sillyhatxu/retry-utils"
@@ -10,106 +11,99 @@ import (
 	"time"
 )
 
-type ClientConf struct {
-	DataSourceName  string
-	DDLPath         string
-	MaxIdleConns    int
-	MaxOpenConns    int
-	ConnMaxLifetime time.Duration
-	Flyway          bool
-	Attempts        uint
-	Delay           time.Duration
-	db              *sql.DB
-	mu              sync.Mutex
+type MysqlClient struct {
+	dataSourceName string
+	db             *sql.DB
+	config         *Config
+	mu             sync.Mutex
 }
 
-func NewMysqlClientConf(DataSourceName string) *ClientConf {
-	return &ClientConf{
-		DataSourceName:  DataSourceName,
-		MaxIdleConns:    50,
-		MaxOpenConns:    100,
-		ConnMaxLifetime: 24 * time.Hour,
-		Attempts:        100,
-		Delay:           100,
+func NewMysqlClientConf(dataSourceName string, opts ...Option) *MysqlClient {
+	//default
+	config := &Config{
+		maxIdleConns:    50,
+		maxOpenConns:    100,
+		connMaxLifetime: 24 * time.Hour,
+		attempts:        3,
+		delay:           200 * time.Millisecond,
+		ddlPath:         "",
+		flyway:          false,
 	}
+	for _, opt := range opts {
+		opt(config)
+	}
+
+	mysqlClient := &MysqlClient{
+		dataSourceName: dataSourceName,
+		config:         config,
+	}
+	return mysqlClient
 }
 
-func (cc *ClientConf) SetMaxIdleConns(MaxIdleConns int) {
-	cc.mu.Lock()
-	defer cc.mu.Unlock()
-	cc.MaxIdleConns = MaxIdleConns
-}
-
-func (cc *ClientConf) SetMaxOpenConns(MaxOpenConns int) {
-	cc.mu.Lock()
-	defer cc.mu.Unlock()
-	cc.MaxOpenConns = MaxOpenConns
-}
-
-func (cc *ClientConf) SetConnMaxLifetime(SetConnMaxLifetime time.Duration) {
-	cc.mu.Lock()
-	defer cc.mu.Unlock()
-	cc.ConnMaxLifetime = SetConnMaxLifetime
-}
-
-func (cc *ClientConf) SetAttempts(Attempts uint) {
-	cc.mu.Lock()
-	defer cc.mu.Unlock()
-	cc.Attempts = Attempts
-}
-
-func (cc *ClientConf) SetDelay(Delay time.Duration) {
-	cc.mu.Lock()
-	defer cc.mu.Unlock()
-	cc.Delay = Delay
-}
-
-func (cc *ClientConf) Initial() error {
-	cc.mu.Lock()
-	defer cc.mu.Unlock()
-	db, err := sql.Open("mysql", cc.DataSourceName)
+func (mc *MysqlClient) Initial() error {
+	mc.mu.Lock()
+	defer mc.mu.Unlock()
+	db, err := mc.OpenDataSource()
 	if err != nil {
-		logrus.Errorf("open database error; %v", err)
+		logrus.Errorf("mc.OpenDataSource error; MysqlClient : %#v,%v", mc, err)
 		return err
 	}
-	err = db.Ping()
+	mc.db = db
+	err = mc.Ping()
 	if err != nil {
 		logrus.Errorf("ping database error; %v", err)
 		return err
 	}
-	cc.db = db
+	err = mc.initialFlayway()
+	if err != nil {
+		logrus.Errorf("initial flayway error; %v", err)
+		return err
+	}
 	return nil
 }
 
-func (cc *ClientConf) Ping() error {
-	return cc.db.Ping()
-}
-
-func (cc *ClientConf) GetDB() (*sql.DB, error) {
+func (mc *MysqlClient) OpenDataSource() (*sql.DB, error) {
+	var resultDB *sql.DB
 	err := retry.Do(func() error {
-		err := cc.Ping()
+		db, err := sql.Open("mysql", mc.dataSourceName)
 		if err != nil {
-			db, err := sql.Open("mysql", cc.DataSourceName)
-			if err != nil {
-				return err
-			}
-			cc.db = db
 			return err
 		}
+		resultDB = db
 		return nil
 	}, retry.ErrorCallback(func(n uint, err error) {
-		logrus.Errorf("retry [%d] get connect error. %v", n, err)
+		logrus.Errorf("retry [%d] open data source error. %v", n, err)
 	}))
 	if err != nil {
 		return nil, err
 	}
-	return cc.db, nil
+	if resultDB == nil {
+		return nil, fmt.Errorf("open datasource error. db is nil. %#v", mc)
+	}
+	return resultDB, nil
 }
 
-func (cc *ClientConf) GetTransaction() (*sql.Tx, error) {
+func (mc *MysqlClient) Ping() error {
+	return mc.db.Ping()
+}
+
+func (mc *MysqlClient) GetDB() (*sql.DB, error) {
+	if err := mc.Ping(); err != nil {
+		logrus.Errorf("ping database error. %v", err)
+		db, err := mc.OpenDataSource()
+		if err != nil {
+			logrus.Errorf("mc.OpenDataSource error; MysqlClient : %#v,%v", mc, err)
+			return nil, err
+		}
+		mc.db = db
+	}
+	return mc.db, nil
+}
+
+func (mc *MysqlClient) GetTransaction() (*sql.Tx, error) {
 	var transaction *sql.Tx
 	err := retry.Do(func() error {
-		db, err := cc.GetDB()
+		db, err := mc.GetDB()
 		if err != nil {
 			return err
 		}
@@ -129,10 +123,22 @@ func (cc *ClientConf) GetTransaction() (*sql.Tx, error) {
 	return transaction, nil
 }
 
+func (mc *MysqlClient) ExecDDL(ddl string) error {
+	db, err := mc.GetDB()
+	if err != nil {
+		return err
+	}
+	logrus.Infof("exec ddl : ")
+	logrus.Infof(ddl)
+	logrus.Infof("--------------------")
+	_, err = db.Exec(ddl)
+	return err
+}
+
 type FieldFunc func(rows *sql.Rows) error
 
-func (cc *ClientConf) FindCustom(query string, fieldFunc FieldFunc, args ...interface{}) error {
-	db, err := cc.GetDB()
+func (mc *MysqlClient) FindCustom(query string, fieldFunc FieldFunc, args ...interface{}) error {
+	db, err := mc.GetDB()
 	if err != nil {
 		return err
 	}
@@ -150,8 +156,8 @@ func (cc *ClientConf) FindCustom(query string, fieldFunc FieldFunc, args ...inte
 	return rows.Err()
 }
 
-func (cc *ClientConf) FindMapArray(sql string, args ...interface{}) ([]map[string]interface{}, error) {
-	tx, err := cc.GetTransaction()
+func (mc *MysqlClient) FindMapArray(sql string, args ...interface{}) ([]map[string]interface{}, error) {
+	tx, err := mc.GetTransaction()
 	if err != nil {
 		logrus.Errorf("get transaction error; %v", err)
 		return nil, err
@@ -194,8 +200,8 @@ func (cc *ClientConf) FindMapArray(sql string, args ...interface{}) ([]map[strin
 	return results, nil
 }
 
-func (cc *ClientConf) FindMapFirst(sql string, args ...interface{}) (map[string]interface{}, error) {
-	array, err := cc.FindMapArray(sql, args...)
+func (mc *MysqlClient) FindMapFirst(sql string, args ...interface{}) (map[string]interface{}, error) {
+	array, err := mc.FindMapArray(sql, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -205,8 +211,8 @@ func (cc *ClientConf) FindMapFirst(sql string, args ...interface{}) (map[string]
 	return array[0], nil
 }
 
-func (cc *ClientConf) FindList(sql string, input interface{}, args ...interface{}) error {
-	results, err := cc.FindMapArray(sql, args...)
+func (mc *MysqlClient) FindList(sql string, input interface{}, args ...interface{}) error {
+	results, err := mc.FindMapArray(sql, args...)
 	if err != nil {
 		return err
 	}
@@ -226,8 +232,8 @@ func (cc *ClientConf) FindList(sql string, input interface{}, args ...interface{
 	return nil
 }
 
-func (cc *ClientConf) FindListByConfig(sql string, input interface{}, config *mapstructure.DecoderConfig, args ...interface{}) error {
-	results, err := cc.FindMapArray(sql, args...)
+func (mc *MysqlClient) FindListByConfig(sql string, input interface{}, config *mapstructure.DecoderConfig, args ...interface{}) error {
+	results, err := mc.FindMapArray(sql, args...)
 	if err != nil {
 		return err
 	}
@@ -242,8 +248,8 @@ func (cc *ClientConf) FindListByConfig(sql string, input interface{}, config *ma
 	return nil
 }
 
-func (cc *ClientConf) FindFirst(sql string, input interface{}, args ...interface{}) error {
-	result, err := cc.FindMapFirst(sql, args...)
+func (mc *MysqlClient) FindFirst(sql string, input interface{}, args ...interface{}) error {
+	result, err := mc.FindMapFirst(sql, args...)
 	if err != nil {
 		return err
 	}
@@ -263,8 +269,8 @@ func (cc *ClientConf) FindFirst(sql string, input interface{}, args ...interface
 	return nil
 }
 
-func (cc *ClientConf) FindFirstByConfig(sql string, input interface{}, config *mapstructure.DecoderConfig, args ...interface{}) error {
-	result, err := cc.FindMapFirst(sql, args...)
+func (mc *MysqlClient) FindFirstByConfig(sql string, input interface{}, config *mapstructure.DecoderConfig, args ...interface{}) error {
+	result, err := mc.FindMapFirst(sql, args...)
 	if err != nil {
 		return err
 	}
@@ -279,8 +285,8 @@ func (cc *ClientConf) FindFirstByConfig(sql string, input interface{}, config *m
 	return nil
 }
 
-func (cc *ClientConf) Count(sql string, args ...interface{}) (int64, error) {
-	tx, err := cc.GetTransaction()
+func (mc *MysqlClient) Count(sql string, args ...interface{}) (int64, error) {
+	tx, err := mc.GetTransaction()
 	if err != nil {
 		logrus.Errorf("db.begin get connection error; %v", err)
 		return 0, err
@@ -295,8 +301,8 @@ func (cc *ClientConf) Count(sql string, args ...interface{}) (int64, error) {
 	return count, nil
 }
 
-func (cc *ClientConf) Insert(sql string, args ...interface{}) (int64, error) {
-	db, err := cc.GetDB()
+func (mc *MysqlClient) Insert(sql string, args ...interface{}) (int64, error) {
+	db, err := mc.GetDB()
 	if err != nil {
 		return 0, nil
 	}
@@ -316,8 +322,8 @@ func (cc *ClientConf) Insert(sql string, args ...interface{}) (int64, error) {
 
 type TransactionCallback func(*sql.Tx) error
 
-func (cc *ClientConf) Transaction(callback TransactionCallback) error {
-	tx, err := cc.GetTransaction()
+func (mc *MysqlClient) Transaction(callback TransactionCallback) error {
+	tx, err := mc.GetTransaction()
 	if err != nil {
 		logrus.Errorf("db.begin get transaction error; %v", err)
 		return err
@@ -331,8 +337,8 @@ func (cc *ClientConf) Transaction(callback TransactionCallback) error {
 	return tx.Commit()
 }
 
-func (cc *ClientConf) Update(sql string, args ...interface{}) (int64, error) {
-	db, err := cc.GetDB()
+func (mc *MysqlClient) Update(sql string, args ...interface{}) (int64, error) {
+	db, err := mc.GetDB()
 	if err != nil {
 		return 0, nil
 	}
@@ -350,8 +356,8 @@ func (cc *ClientConf) Update(sql string, args ...interface{}) (int64, error) {
 	return result.RowsAffected()
 }
 
-func (cc *ClientConf) Delete(sql string, args ...interface{}) (int64, error) {
-	db, err := cc.GetDB()
+func (mc *MysqlClient) Delete(sql string, args ...interface{}) (int64, error) {
+	db, err := mc.GetDB()
 	if err != nil {
 		return 0, nil
 	}
