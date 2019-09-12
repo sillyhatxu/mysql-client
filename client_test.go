@@ -112,5 +112,12 @@ func TestHasTable(t *testing.T) {
 	b, err = dbclient.HasTable("userinfo")
 	assert.Nil(t, err)
 	assert.EqualValues(t, b, true)
+}
 
+func TestMysqlClient_Initial(t *testing.T) {
+	var Client = NewMysqlClientConf(dataSourceName, DDLPath("/Users/cookie/go/gopath/src/github.com/sillyhatxu/mini-mq/db/migration"))
+	err := Client.Initial()
+	if err != nil {
+		panic(err)
+	}
 }

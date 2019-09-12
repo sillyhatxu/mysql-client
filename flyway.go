@@ -24,13 +24,13 @@ INSERT INTO schema_version (script, checksum, execution_time, status) values (?,
 	ddlSchemaVersion = `
 CREATE TABLE IF NOT EXISTS schema_version
 (
-  id             bigint(48)   NOT NULL AUTO_INCREMENT,
+  id             bigint(48)   NOT NULL AUTO_INCREMENT PRIMARY KEY,
   script         varchar(100) NOT NULL,
   checksum       TEXT         NOT NULL,
   execution_time varchar(50)  NOT NULL,
   status         varchar(10)  NOT NULL,
   created_time   timestamp(3) NOT NULL DEFAULT current_timestamp(3)
-) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4;
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4
 `
 )
 
