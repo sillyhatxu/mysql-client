@@ -19,7 +19,7 @@ type Userinfo struct {
 }
 
 const (
-	dataSourceName = `sillyhat:sillyhat@tcp(127.0.0.1:3308)/sillyhat`
+	dataSourceName = `sillyhat:sillyhat@tcp(127.0.0.1:3308)/sillyhat?parseTime=true`
 	maxIdleConns   = 5
 	maxOpenConns   = 10
 )
@@ -117,7 +117,11 @@ func TestHasTable(t *testing.T) {
 }
 
 func TestMysqlClient_Initial(t *testing.T) {
-	var Client, err = NewMysqlClient(dataSourceName, DDLPath("/Users/cookie/go/gopath/src/github.com/sillyhatxu/mini-mq/db/migration"))
+	var Client, err = NewMysqlClient(
+		`sillyhat:sillyhat@tcp(127.0.0.1:3308)/sillyhat_user?parseTime=true`,
+		DDLPath("/Users/shikuanxu/go/src/github.com/sillyhatxu/user-backend/db/migration"),
+	)
+	//var Client, err = NewMysqlClient(dataSourceName, DDLPath("/Users/cookie/go/gopath/src/github.com/sillyhatxu/mini-mq/db/migration"))
 	if err != nil {
 		panic(err)
 	}
