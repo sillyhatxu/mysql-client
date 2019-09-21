@@ -18,7 +18,7 @@ type MysqlClient struct {
 	mu             sync.Mutex
 }
 
-func NewMysqlClientConf(dataSourceName string, opts ...Option) *MysqlClient {
+func NewMysqlClient(dataSourceName string, opts ...Option) (*MysqlClient, error) {
 	//default
 	config := &Config{
 		maxIdleConns:    50,
@@ -37,10 +37,10 @@ func NewMysqlClientConf(dataSourceName string, opts ...Option) *MysqlClient {
 		dataSourceName: dataSourceName,
 		config:         config,
 	}
-	return mysqlClient
+	return mysqlClient, mysqlClient.initial()
 }
 
-func (mc *MysqlClient) Initial() error {
+func (mc *MysqlClient) initial() error {
 	mc.mu.Lock()
 	defer mc.mu.Unlock()
 	db, err := mc.OpenDataSource()

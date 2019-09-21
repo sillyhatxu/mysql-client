@@ -87,9 +87,10 @@ const (
 )
 
 func TestClientGetConnection(t *testing.T) {
-	dbclient := NewMysqlClientConf(dataSourceName, Attempts(20), ConnMaxLifetime(500*time.Millisecond))
-	err := dbclient.Initial()
-	assert.Nil(t, err)
+	dbclient, err := NewMysqlClient(dataSourceName, Attempts(20), ConnMaxLifetime(500*time.Millisecond))
+	if err != nil {
+		panic(err)
+	}
 	for {
 		count, err := dbclient.Count(count_sql)
 		if err != nil {
@@ -103,9 +104,10 @@ func TestClientGetConnection(t *testing.T) {
 }
 
 func TestHasTable(t *testing.T) {
-	dbclient := NewMysqlClientConf(dataSourceName)
-	err := dbclient.Initial()
-	assert.Nil(t, err)
+	dbclient, err := NewMysqlClient(dataSourceName)
+	if err != nil {
+		panic(err)
+	}
 	b, err := dbclient.HasTable("test")
 	assert.Nil(t, err)
 	assert.EqualValues(t, b, false)
@@ -115,9 +117,10 @@ func TestHasTable(t *testing.T) {
 }
 
 func TestMysqlClient_Initial(t *testing.T) {
-	var Client = NewMysqlClientConf(dataSourceName, DDLPath("/Users/cookie/go/gopath/src/github.com/sillyhatxu/mini-mq/db/migration"))
-	err := Client.Initial()
+	var Client, err = NewMysqlClient(dataSourceName, DDLPath("/Users/cookie/go/gopath/src/github.com/sillyhatxu/mini-mq/db/migration"))
 	if err != nil {
 		panic(err)
 	}
+	err = Client.Ping()
+	assert.Nil(t, err)
 }
