@@ -220,7 +220,7 @@ func (mc *MysqlClient) FindList(sql string, input interface{}, args ...interface
 		return err
 	}
 	config := &mapstructure.DecoderConfig{
-		DecodeHook:       mapstructure.StringToTimeHookFunc("2006-01-02T15:04:05"),
+		DecodeHook:       mapstructure.StringToTimeHookFunc("2006-01-02T15:04:05Z07:00"),
 		WeaklyTypedInput: true,
 		Result:           input,
 	}
@@ -260,7 +260,7 @@ func (mc *MysqlClient) FindFirst(sql string, input interface{}, args ...interfac
 		return err
 	}
 	config := &mapstructure.DecoderConfig{
-		DecodeHook:       mapstructure.StringToTimeHookFunc("2006-01-02T15:04:05"),
+		DecodeHook:       mapstructure.StringToTimeHookFunc("2006-01-02T15:04:05Z07:00"),
 		WeaklyTypedInput: true,
 		Result:           input,
 	}
