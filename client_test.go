@@ -1,6 +1,7 @@
 package dbclient
 
 import (
+	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"log"
 	"testing"
@@ -19,7 +20,7 @@ type Userinfo struct {
 }
 
 const (
-	dataSourceName = `sillyhat:sillyhat@tcp(127.0.0.1:3308)/sillyhat?parseTime=true`
+	dataSourceName = `sillyhat:sillyhat@tcp(127.0.0.1:3308)/sillyhat`
 	maxIdleConns   = 5
 	maxOpenConns   = 10
 )
@@ -118,7 +119,8 @@ func TestHasTable(t *testing.T) {
 
 func TestMysqlClient_Initial(t *testing.T) {
 	var Client, err = NewMysqlClient(
-		`sillyhat:sillyhat@tcp(127.0.0.1:3308)/sillyhat_user?parseTime=true`,
+		//`sillyhat:sillyhat@tcp(127.0.0.1:3308)/sillyhat_user`,
+		`sillyhat:sillyhat@tcp(127.0.0.1:3308)/sillyhat_user?loc=Asia%2FSingapore&parseTime=true`,
 		DDLPath("/Users/shikuanxu/go/src/github.com/sillyhatxu/user-backend/db/migration"),
 	)
 	//var Client, err = NewMysqlClient(dataSourceName, DDLPath("/Users/cookie/go/gopath/src/github.com/sillyhatxu/mini-mq/db/migration"))
@@ -127,4 +129,21 @@ func TestMysqlClient_Initial(t *testing.T) {
 	}
 	err = Client.Ping()
 	assert.Nil(t, err)
+}
+
+func TestMysqlClient_SchemaVersionArray(t *testing.T) {
+	var Client, err = NewMysqlClient(
+		//`sillyhat:sillyhat@tcp(127.0.0.1:3308)/sillyhat_user`,
+		`sillyhat:sillyhat@tcp(127.0.0.1:3308)/sillyhat_user?loc=Asia%2FSingapore&parseTime=true`,
+		DDLPath("/Users/shikuanxu/go/src/github.com/sillyhatxu/user-backend/db/migration"),
+	)
+	//var Client, err = NewMysqlClient(dataSourceName, DDLPath("/Users/cookie/go/gopath/src/github.com/sillyhatxu/mini-mq/db/migration"))
+	if err != nil {
+		panic(err)
+	}
+	array, err := Client.SchemaVersionArray()
+	assert.Nil(t, err)
+	for _, sv := range array {
+		logrus.Infof("%#v; time : %v", sv, sv.CreatedTime.UnixNano()/int64(time.Millisecond))
+	}
 }

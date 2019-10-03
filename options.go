@@ -52,3 +52,9 @@ func DDLPath(ddlPath string) Option {
 		}
 	}
 }
+
+func Flyway(flyway bool) Option {
+	return func(c *Config) {
+		c.flyway = flyway
+	}
+}

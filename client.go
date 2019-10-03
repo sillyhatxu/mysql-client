@@ -212,12 +212,15 @@ func (mc *MysqlClient) FindMapFirst(sql string, args ...interface{}) (map[string
 }
 
 func (mc *MysqlClient) FindList(sql string, input interface{}, args ...interface{}) error {
+	if isSlice(input) {
+		return fmt.Errorf("%v must be a slice", input)
+	}
 	results, err := mc.FindMapArray(sql, args...)
 	if err != nil {
 		return err
 	}
 	config := &mapstructure.DecoderConfig{
-		DecodeHook:       mapstructure.StringToTimeHookFunc("2006-01-02 15:04:05"),
+		DecodeHook:       mapstructure.StringToTimeHookFunc("2006-01-02T15:04:05"),
 		WeaklyTypedInput: true,
 		Result:           input,
 	}
@@ -232,7 +235,7 @@ func (mc *MysqlClient) FindList(sql string, input interface{}, args ...interface
 	return nil
 }
 
-func (mc *MysqlClient) FindListByConfig(sql string, input interface{}, config *mapstructure.DecoderConfig, args ...interface{}) error {
+func (mc *MysqlClient) FindListByConfig(sql string, config *mapstructure.DecoderConfig, args ...interface{}) error {
 	results, err := mc.FindMapArray(sql, args...)
 	if err != nil {
 		return err
@@ -249,12 +252,15 @@ func (mc *MysqlClient) FindListByConfig(sql string, input interface{}, config *m
 }
 
 func (mc *MysqlClient) FindFirst(sql string, input interface{}, args ...interface{}) error {
+	if isStruct(input) {
+		return fmt.Errorf("%v must be a struct or a struct pointer", input)
+	}
 	result, err := mc.FindMapFirst(sql, args...)
 	if err != nil {
 		return err
 	}
 	config := &mapstructure.DecoderConfig{
-		DecodeHook:       mapstructure.StringToTimeHookFunc("2006-01-02 15:04:05"),
+		DecodeHook:       mapstructure.StringToTimeHookFunc("2006-01-02T15:04:05"),
 		WeaklyTypedInput: true,
 		Result:           input,
 	}
@@ -269,7 +275,7 @@ func (mc *MysqlClient) FindFirst(sql string, input interface{}, args ...interfac
 	return nil
 }
 
-func (mc *MysqlClient) FindFirstByConfig(sql string, input interface{}, config *mapstructure.DecoderConfig, args ...interface{}) error {
+func (mc *MysqlClient) FindFirstByConfig(sql string, config *mapstructure.DecoderConfig, args ...interface{}) error {
 	result, err := mc.FindMapFirst(sql, args...)
 	if err != nil {
 		return err

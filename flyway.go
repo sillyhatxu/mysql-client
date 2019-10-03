@@ -40,7 +40,7 @@ type SchemaVersion struct {
 	Checksum      string
 	ExecutionTime string
 	Status        string
-	CreatedTime   time.Time
+	CreatedTime   *time.Time
 }
 
 func (mc *MysqlClient) initialFlayway() (err error) {
