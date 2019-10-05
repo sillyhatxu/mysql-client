@@ -101,7 +101,7 @@ func (mc *MysqlClient) readFile(fileInfo os.FileInfo, svArray []SchemaVersion) e
 	exist, sv := mc.findByScript(fileInfo.Name(), svArray)
 	if exist {
 		if sv.Checksum != strconv.FormatUint(checksum, 10) {
-			return fmt.Errorf("sql file has been changed. %#v", sv)
+			return fmt.Errorf("sql file has been changed. check : %d; db : %#v", checksum, sv)
 		}
 		return nil
 	}

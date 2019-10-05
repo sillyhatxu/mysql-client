@@ -47,9 +47,6 @@ func Delay(delay time.Duration) Option {
 func DDLPath(ddlPath string) Option {
 	return func(c *Config) {
 		c.ddlPath = ddlPath
-		if ddlPath != "" {
-			c.flyway = true
-		}
 	}
 }
 
