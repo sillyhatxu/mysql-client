@@ -51,16 +51,11 @@ func NewMysqlClient(userName string, password string, host string, port int, sch
 	return mysqlClient, mysqlClient.initial()
 }
 
-func (mc *MysqlClient) getMysqlDataSourceName() (string, error) {
-	baseUrl, err := url.Parse(fmt.Sprintf("%s:%s@tcp(%s:%d)/%s", mc.userName, mc.password, mc.host, mc.port, mc.schema))
-	if err != nil {
-		return "", err
-	}
+func (mc *MysqlClient) getMysqlDataSourceName() string {
 	params := url.Values{}
 	params.Add("loc", mc.config.local)
 	params.Add("parseTime", fmt.Sprintf("%t", mc.config.parseTime))
-	baseUrl.RawQuery = params.Encode()
-	return baseUrl.String(), nil
+	return fmt.Sprintf("%s:%s@tcp(%s:%d)/%s?%s", mc.userName, mc.password, mc.host, mc.port, mc.schema, params.Encode())
 }
 
 func (mc *MysqlClient) initial() error {
@@ -88,13 +83,11 @@ func (mc *MysqlClient) initial() error {
 func (mc *MysqlClient) OpenDataSource() (*sql.DB, error) {
 	var resultDB *sql.DB
 	err := retry.Do(func() error {
-		dataSourceName, err := mc.getMysqlDataSourceName()
+		dataSourceName := mc.getMysqlDataSourceName()
 		logrus.Infof("connect : %s", dataSourceName)
-		if err != nil {
-			return err
-		}
 		db, err := sql.Open("mysql", dataSourceName)
 		if err != nil {
+			logrus.Errorf("open data source name error. %v", err)
 			return err
 		}
 		resultDB = db
