@@ -3,6 +3,9 @@ package dbclient
 import "time"
 
 type Config struct {
+	//loc=Asia%2FSingapore&parseTime=true
+	local           string
+	parseTime       bool
 	maxIdleConns    int
 	maxOpenConns    int
 	connMaxLifetime time.Duration
@@ -13,6 +16,18 @@ type Config struct {
 }
 
 type Option func(*Config)
+
+func Local(local string) Option {
+	return func(c *Config) {
+		c.local = local
+	}
+}
+
+func ParseTime(parseTime bool) Option {
+	return func(c *Config) {
+		c.parseTime = parseTime
+	}
+}
 
 func MaxIdleConns(maxIdleConns int) Option {
 	return func(c *Config) {

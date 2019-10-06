@@ -1,6 +1,7 @@
 package dbclient
 
 import (
+	"fmt"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"log"
@@ -20,9 +21,11 @@ type Userinfo struct {
 }
 
 const (
-	dataSourceName = `sillyhat:sillyhat@tcp(127.0.0.1:3308)/sillyhat`
-	maxIdleConns   = 5
-	maxOpenConns   = 10
+	userName = "sillyhat"
+	password = "sillyhat"
+	host     = "192.168.1.87"
+	port     = 3306
+	schema   = "sillyhat_remind"
 )
 
 const (
@@ -87,8 +90,16 @@ const (
 		`
 )
 
+func TestGetMysqlDataSourceName(t *testing.T) {
+	dbclient, err := NewMysqlClient(userName, password, host, port, schema)
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println(dbclient.getMysqlDataSourceName())
+}
+
 func TestClientGetConnection(t *testing.T) {
-	dbclient, err := NewMysqlClient(dataSourceName, Attempts(20), ConnMaxLifetime(500*time.Millisecond))
+	dbclient, err := NewMysqlClient(userName, password, host, port, schema, Attempts(20), ConnMaxLifetime(500*time.Millisecond))
 	if err != nil {
 		panic(err)
 	}
@@ -105,7 +116,7 @@ func TestClientGetConnection(t *testing.T) {
 }
 
 func TestHasTable(t *testing.T) {
-	dbclient, err := NewMysqlClient(dataSourceName)
+	dbclient, err := NewMysqlClient(userName, password, host, port, schema)
 	if err != nil {
 		panic(err)
 	}
@@ -118,11 +129,8 @@ func TestHasTable(t *testing.T) {
 }
 
 func TestMysqlClient_Initial(t *testing.T) {
-	var Client, err = NewMysqlClient(
-		//`sillyhat:sillyhat@tcp(127.0.0.1:3308)/sillyhat_user`,
-		`sillyhat:sillyhat@tcp(127.0.0.1:3308)/sillyhat_user?loc=Asia%2FSingapore&parseTime=true`,
-		DDLPath("/Users/shikuanxu/go/src/github.com/sillyhatxu/user-backend/db/migration"),
-	)
+	//sillyhat:sillyhat@tcp(127.0.0.1:3308)/sillyhat_user?loc=Asia%2FSingapore&parseTime=true
+	var Client, err = NewMysqlClient(userName, password, host, port, schema, DDLPath("/Users/shikuanxu/go/src/github.com/sillyhatxu/user-backend/db/migration"))
 	//var Client, err = NewMysqlClient(dataSourceName, DDLPath("/Users/cookie/go/gopath/src/github.com/sillyhatxu/mini-mq/db/migration"))
 	if err != nil {
 		panic(err)
@@ -132,11 +140,7 @@ func TestMysqlClient_Initial(t *testing.T) {
 }
 
 func TestMysqlClient_SchemaVersionArray(t *testing.T) {
-	var Client, err = NewMysqlClient(
-		//`sillyhat:sillyhat@tcp(127.0.0.1:3308)/sillyhat_user`,
-		`sillyhat:sillyhat@tcp(127.0.0.1:3308)/sillyhat_user?loc=Asia%2FSingapore&parseTime=true`,
-		DDLPath("/Users/shikuanxu/go/src/github.com/sillyhatxu/user-backend/db/migration"),
-	)
+	var Client, err = NewMysqlClient(userName, password, host, port, schema, DDLPath("/Users/shikuanxu/go/src/github.com/sillyhatxu/user-backend/db/migration"))
 	//var Client, err = NewMysqlClient(dataSourceName, DDLPath("/Users/cookie/go/gopath/src/github.com/sillyhatxu/mini-mq/db/migration"))
 	if err != nil {
 		panic(err)

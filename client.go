@@ -7,22 +7,29 @@ import (
 	"github.com/mitchellh/mapstructure"
 	"github.com/sillyhatxu/retry-utils"
 	"github.com/sirupsen/logrus"
+	"net/url"
 	"sync"
 	"time"
 )
 
 type MysqlClient struct {
-	dataSourceName string
-	db             *sql.DB
-	config         *Config
-	mu             sync.Mutex
+	userName string
+	password string
+	host     string
+	port     int
+	schema   string
+	config   *Config
+	db       *sql.DB
+	mu       sync.Mutex
 }
 
-func NewMysqlClient(dataSourceName string, opts ...Option) (*MysqlClient, error) {
+func NewMysqlClient(userName string, password string, host string, port int, schema string, opts ...Option) (*MysqlClient, error) {
 	//default
 	config := &Config{
-		maxIdleConns:    50,
-		maxOpenConns:    100,
+		local:           "Asia/Singapore",
+		parseTime:       true,
+		maxIdleConns:    20,
+		maxOpenConns:    40,
 		connMaxLifetime: 24 * time.Hour,
 		attempts:        3,
 		delay:           200 * time.Millisecond,
@@ -34,10 +41,26 @@ func NewMysqlClient(dataSourceName string, opts ...Option) (*MysqlClient, error)
 	}
 
 	mysqlClient := &MysqlClient{
-		dataSourceName: dataSourceName,
-		config:         config,
+		userName: userName,
+		password: password,
+		host:     host,
+		port:     port,
+		schema:   schema,
+		config:   config,
 	}
 	return mysqlClient, mysqlClient.initial()
+}
+
+func (mc *MysqlClient) getMysqlDataSourceName() (string, error) {
+	baseUrl, err := url.Parse(fmt.Sprintf("%s:%s@tcp(%s:%d)/%s", mc.userName, mc.password, mc.host, mc.port, mc.schema))
+	if err != nil {
+		return "", err
+	}
+	params := url.Values{}
+	params.Add("loc", mc.config.local)
+	params.Add("parseTime", fmt.Sprintf("%t", mc.config.parseTime))
+	baseUrl.RawQuery = params.Encode()
+	return baseUrl.String(), nil
 }
 
 func (mc *MysqlClient) initial() error {
@@ -65,7 +88,12 @@ func (mc *MysqlClient) initial() error {
 func (mc *MysqlClient) OpenDataSource() (*sql.DB, error) {
 	var resultDB *sql.DB
 	err := retry.Do(func() error {
-		db, err := sql.Open("mysql", mc.dataSourceName)
+		dataSourceName, err := mc.getMysqlDataSourceName()
+		logrus.Infof("connect : %s", dataSourceName)
+		if err != nil {
+			return err
+		}
+		db, err := sql.Open("mysql", dataSourceName)
 		if err != nil {
 			return err
 		}
