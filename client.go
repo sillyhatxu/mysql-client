@@ -39,7 +39,6 @@ func NewMysqlClient(userName string, password string, host string, port int, sch
 	for _, opt := range opts {
 		opt(config)
 	}
-
 	mysqlClient := &MysqlClient{
 		userName: userName,
 		password: password,
@@ -320,8 +319,8 @@ func (mc *MysqlClient) Count(sql string, args ...interface{}) (int64, error) {
 	}
 	defer tx.Commit()
 	var count int64
-	countErr := tx.QueryRow(sql, args...).Scan(&count)
-	if countErr != nil {
+	err = tx.QueryRow(sql, args...).Scan(&count)
+	if err != nil {
 		logrus.Errorf("query count error; %v", err)
 		return 0, err
 	}
