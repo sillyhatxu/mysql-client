@@ -1,23 +1,23 @@
 package dbclient
 
 import (
-	"fmt"
-	"github.com/sirupsen/logrus"
-	"github.com/stretchr/testify/assert"
-	"log"
-	"testing"
 	"time"
 )
 
-type Userinfo struct {
-	Id               int64     `mapstructure:"id"`
-	Name             string    `mapstructure:"name"`
-	Age              int       `mapstructure:"age"`
-	Birthday         time.Time `mapstructure:"birthday"`
-	Description      string    `mapstructure:"description"`
-	IsDelete         bool      `mapstructure:"is_delete"`
-	CreatedTime      time.Time `mapstructure:"created_date"`
-	LastModifiedDate time.Time `mapstructure:"last_modified_date"`
+// Model Struct
+type User struct {
+	Id               int64
+	LoginName        string
+	Password         string
+	UserName         string
+	Status           bool
+	Platform         string
+	Age              *int
+	Amount           *float64
+	Description      *string
+	Birthday         *time.Time
+	CreatedTime      time.Time
+	LastModifiedTime time.Time
 }
 
 const (
@@ -90,64 +90,65 @@ const (
 		`
 )
 
-func TestGetMysqlDataSourceName(t *testing.T) {
-	dbclient, err := NewMysqlClient(userName, password, host, port, schema)
-	if err != nil {
-		panic(err)
-	}
-	fmt.Println(dbclient.getMysqlDataSourceName())
-}
-
-func TestClientGetConnection(t *testing.T) {
-	dbclient, err := NewMysqlClient(userName, password, host, port, schema, Attempts(20), ConnMaxLifetime(500*time.Millisecond))
-	if err != nil {
-		panic(err)
-	}
-	for {
-		count, err := dbclient.Count(count_sql)
-		if err != nil {
-			log.Println(err)
-			continue
-		}
-		log.Println(count)
-		time.Sleep(5 * time.Second)
-	}
-
-}
-
-func TestHasTable(t *testing.T) {
-	dbclient, err := NewMysqlClient(userName, password, host, port, schema)
-	if err != nil {
-		panic(err)
-	}
-	b, err := dbclient.HasTable("test")
-	assert.Nil(t, err)
-	assert.EqualValues(t, b, false)
-	b, err = dbclient.HasTable("userinfo")
-	assert.Nil(t, err)
-	assert.EqualValues(t, b, true)
-}
-
-func TestMysqlClient_Initial(t *testing.T) {
-	//sillyhat:sillyhat@tcp(127.0.0.1:3308)/sillyhat_user?loc=Asia%2FSingapore&parseTime=true
-	var Client, err = NewMysqlClient(userName, password, host, port, schema, DDLPath("/Users/shikuanxu/go/src/github.com/sillyhatxu/user-backend/db/migration"))
-	//var Client, err = NewMysqlClient(dataSourceName, DDLPath("/Users/cookie/go/gopath/src/github.com/sillyhatxu/mini-mq/db/migration"))
-	if err != nil {
-		panic(err)
-	}
-	err = Client.Ping()
-	assert.Nil(t, err)
-}
-
-func TestMysqlClient_SchemaVersionArray(t *testing.T) {
-	var Client, err = NewMysqlClient(userName, password, host, port, schema, DDLPath("/Users/shikuanxu/go/src/github.com/sillyhatxu/user-backend/db/migration"))
-	//var Client, err = NewMysqlClient(dataSourceName, DDLPath("/Users/cookie/go/gopath/src/github.com/sillyhatxu/mini-mq/db/migration"))
-	if err != nil {
-		panic(err)
-	}
-	array, err := Client.SchemaVersionArray()
-	assert.Nil(t, err)
-	for _, sv := range array {
-		logrus.Infof("%#v; time : %v", sv, sv.CreatedTime.UnixNano()/int64(time.Millisecond))
-	}
-}
+//
+//func TestGetMysqlDataSourceName(t *testing.T) {
+//	dbclient, err := NewMysqlClient(userName, password, host, port, schema)
+//	if err != nil {
+//		panic(err)
+//	}
+//	fmt.Println(dbclient.getMysqlDataSourceName())
+//}
+//
+//func TestClientGetConnection(t *testing.T) {
+//	dbclient, err := NewMysqlClient(userName, password, host, port, schema, Attempts(20), ConnMaxLifetime(500*time.Millisecond))
+//	if err != nil {
+//		panic(err)
+//	}
+//	for {
+//		count, err := dbclient.Count(count_sql)
+//		if err != nil {
+//			log.Println(err)
+//			continue
+//		}
+//		log.Println(count)
+//		time.Sleep(5 * time.Second)
+//	}
+//
+//}
+//
+//func TestHasTable(t *testing.T) {
+//	dbclient, err := NewMysqlClient(userName, password, host, port, schema)
+//	if err != nil {
+//		panic(err)
+//	}
+//	b, err := dbclient.HasTable("test")
+//	assert.Nil(t, err)
+//	assert.EqualValues(t, b, false)
+//	b, err = dbclient.HasTable("userinfo")
+//	assert.Nil(t, err)
+//	assert.EqualValues(t, b, true)
+//}
+//
+//func TestMysqlClient_Initial(t *testing.T) {
+//	//sillyhat:sillyhat@tcp(127.0.0.1:3308)/sillyhat_user?loc=Asia%2FSingapore&parseTime=true
+//	var Client, err = NewMysqlClient(userName, password, host, port, schema, DDLPath("/Users/shikuanxu/go/src/github.com/sillyhatxu/user-backend/db/migration"))
+//	//var Client, err = NewMysqlClient(dataSourceName, DDLPath("/Users/cookie/go/gopath/src/github.com/sillyhatxu/mini-mq/db/migration"))
+//	if err != nil {
+//		panic(err)
+//	}
+//	err = Client.Ping()
+//	assert.Nil(t, err)
+//}
+//
+//func TestMysqlClient_SchemaVersionArray(t *testing.T) {
+//	var Client, err = NewMysqlClient(userName, password, host, port, schema, DDLPath("/Users/shikuanxu/go/src/github.com/sillyhatxu/user-backend/db/migration"))
+//	//var Client, err = NewMysqlClient(dataSourceName, DDLPath("/Users/cookie/go/gopath/src/github.com/sillyhatxu/mini-mq/db/migration"))
+//	if err != nil {
+//		panic(err)
+//	}
+//	array, err := Client.SchemaVersionArray()
+//	assert.Nil(t, err)
+//	for _, sv := range array {
+//		logrus.Infof("%#v; time : %v", sv, sv.CreatedTime.UnixNano()/int64(time.Millisecond))
+//	}
+//}

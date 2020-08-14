@@ -3,7 +3,6 @@ package dbclient
 import (
 	"database/sql"
 	"fmt"
-	"github.com/sirupsen/logrus"
 	"hash/fnv"
 	"io/ioutil"
 	"os"
@@ -47,10 +46,10 @@ func (mc *MysqlClient) initialFlayway() (err error) {
 	if !mc.config.flyway {
 		return nil
 	}
-	err = mc.initialSchemaVersion()
-	if err != nil {
-		return err
-	}
+	//err = mc.initialSchemaVersion()
+	//if err != nil {
+	//	return err
+	//}
 	err = mc.executeFlayway()
 	if err != nil {
 		return err
@@ -117,7 +116,7 @@ func (mc *MysqlClient) readFile(fileInfo os.FileInfo, svArray []SchemaVersion) e
 	}
 	elapsed := time.Since(execTime)
 	schemaVersion.ExecutionTime = shortDur(elapsed)
-	mc.insertSchemaVersion(schemaVersion)
+	//mc.insertSchemaVersion(schemaVersion)
 	if err != nil {
 		return err
 	}
@@ -135,12 +134,12 @@ func shortDur(d time.Duration) string {
 	return s
 }
 
-func (mc *MysqlClient) insertSchemaVersion(schemaVersion SchemaVersion) {
-	_, err := mc.Insert(insertSchemaVersionSQL, schemaVersion.Script, schemaVersion.Checksum, schemaVersion.ExecutionTime, schemaVersion.Status)
-	if err != nil {
-		logrus.Errorf("insert schema version error. %v", err)
-	}
-}
+//func (mc *MysqlClient) insertSchemaVersion(schemaVersion SchemaVersion) {
+//	_, err := mc.Insert(insertSchemaVersionSQL, schemaVersion.Script, schemaVersion.Checksum, schemaVersion.ExecutionTime, schemaVersion.Status)
+//	if err != nil {
+//		logrus.Errorf("insert schema version error. %v", err)
+//	}
+//}
 
 func (mc *MysqlClient) findByScript(script string, svArray []SchemaVersion) (bool, *SchemaVersion) {
 	for _, sv := range svArray {
@@ -177,28 +176,28 @@ func (mc *MysqlClient) SchemaVersionArray() ([]SchemaVersion, error) {
 	return svArray, nil
 }
 
-func (mc *MysqlClient) initialSchemaVersion() error {
-	exist, err := mc.HasTable("schema_version")
-	if err != nil {
-		return err
-	}
-	if exist {
-		return nil
-	}
-	return mc.ExecDDL(ddlSchemaVersion)
-}
+//func (mc *MysqlClient) initialSchemaVersion() error {
+//	exist, err := mc.HasTable("schema_version")
+//	if err != nil {
+//		return err
+//	}
+//	if exist {
+//		return nil
+//	}
+//	return mc.ExecDDL(ddlSchemaVersion)
+//}
 
-func (mc *MysqlClient) HasTable(tableName string) (bool, error) {
-	db, err := mc.GetDB()
-	if err != nil {
-		return true, err
-	}
-	_, err = db.Query(fmt.Sprintf("SELECT 1 FROM %s LIMIT 1", tableName))
-	if err != nil {
-		if strings.HasSuffix(err.Error(), "doesn't exist") {
-			return false, nil
-		}
-		return true, err
-	}
-	return true, nil
-}
+//func (mc *MysqlClient) HasTable(tableName string) (bool, error) {
+//	db, err := mc.GetDB()
+//	if err != nil {
+//		return true, err
+//	}
+//	_, err = db.Query(fmt.Sprintf("SELECT 1 FROM %s LIMIT 1", tableName))
+//	if err != nil {
+//		if strings.HasSuffix(err.Error(), "doesn't exist") {
+//			return false, nil
+//		}
+//		return true, err
+//	}
+//	return true, nil
+//}
