@@ -1,96 +1,16 @@
-package dbclient
+package mysqlclient
 
 import (
-	"time"
+	"github.com/stretchr/testify/assert"
+	"testing"
 )
 
-// Model Struct
-type User struct {
-	Id               int64
-	LoginName        string
-	Password         string
-	UserName         string
-	Status           bool
-	Platform         string
-	Age              *int
-	Amount           *float64
-	Description      *string
-	Birthday         *time.Time
-	CreatedTime      time.Time
-	LastModifiedTime time.Time
+func TestNewMysqlClient(t *testing.T) {
+	once.Do(setup)
+	err := mysqlClient.Ping()
+	assert.Nil(t, err)
 }
 
-const (
-	userName = "sillyhat"
-	password = "sillyhat"
-	host     = "192.168.1.87"
-	port     = 3306
-	schema   = "sillyhat_remind"
-)
-
-const (
-	insert_sql = `
-		insert into userinfo 
-		(name, age, birthday, description, is_delete, created_date, last_modified_date)
-		values (?, ?, ?, ?, ?, now(), now())
-	`
-	update_sql = `
-		UPDATE userinfo
-		SET name               = ?,
-		    age                = ?,
-		    birthday           = ?,
-		    description        = ?,
-		    is_delete          = ?,
-		    last_modified_date = now()
-		WHERE id = ?;
-	`
-
-	count_sql = `
-		select count(1) from userinfo
-	`
-
-	findAll_sql = `
-		select id,
-		       name,
-		       age,
-		       TIMESTAMP(birthday) birthday,
-		       description,
-		       (is_delete = b'1')  is_delete,
-		       created_date,
-		       last_modified_date
-		from userinfo
-		where age > ? and is_delete = ? and name like ?
-	`
-
-	findOne_sql = `
-		select id,name, age, TIMESTAMP(birthday) birthday, description, (is_delete = b'1') is_delete, created_date, last_modified_date from userinfo where id = ? and is_delete = ?
-	`
-
-	deleteOne_sql = `
-		delete from userinfo where id = ? 
-	`
-
-	delete_sql = `
-		delete from userinfo where id in (?,?,?,?,?,?,?,?,?,?)
-	`
-
-	create_table = `
-		create table userinfo
-		(
-			id int auto_increment,
-			name varchar(100) null,
-			age int null,
-			birthday date null,
-			description text null,
-			is_delete bit default 0 not null,
-			created_date timestamp null,
-			last_modified_date timestamp null,
-			constraint userinfo_pk primary key (id)
-		)		
-		`
-)
-
-//
 //func TestGetMysqlDataSourceName(t *testing.T) {
 //	dbclient, err := NewMysqlClient(userName, password, host, port, schema)
 //	if err != nil {
